@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>競選影片預覽 - Campaign Video Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #video-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scene {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            display: none;
+        }
+        
+        .scene.active {
+            display: block;
+        }
+        
+        /* 只有開場和結尾使用 flex，照片場景不用 */
+        #opening, #closing {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 開場和結尾場景 active 時使用 flex */
+        #opening.active, #closing.active {
+            display: flex !important;
+        }
+        
+        /* 開場 - 黎明升起動態背景 */
+        #opening {
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            background: #0f172a; /* 初始深蓝色背景 */
+        }
+        
+        /* 使用伪元素创建可动画的渐变层 */
+        #opening::after {
+            content: '';
+            position: absolute;
+            top: 0%;
+            left: 0;
+            width: 100%;
+            height: 300%;
+            background: linear-gradient(to bottom, 
+                #0f172a 0%,   /* 深夜藍 */
+                #1e293b 20%,  /* 夜空 */
+                #334155 40%,  /* 黎明前 */
+                #64748b 60%,  /* 破曉 */
+                #f59e0b 80%,  /* 晨曦 */
+                #fbbf24 100%  /* 日出金光 */
+            );
+            z-index: 1;
+        }
+        
+        /* 黎明動畫 - 渐变层向上移动，露出底部金色 */
+        #opening.active::after {
+            animation: sunriseMove 4s ease-in-out 0.1s forwards;
+        }
+        
+        @keyframes sunriseMove {
+            0% {
+                top: 0%;
+            }
+            100% {
+                top: -200%;
+            }
+        }
+        
+        /* 太陽光暈效果 */
+        #opening::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.8) 0%, rgba(245, 158, 11, 0.4) 40%, transparent 70%);
+            bottom: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            z-index: 5;
+        }
+        
+        #opening.active::before {
+            animation: sunRise 4s ease-in-out forwards;
+        }
+        
+        @keyframes sunRise {
+            0% {
+                bottom: -200px;
+                opacity: 0;
+            }
+            100% {
+                bottom: 20%;
+                opacity: 1;
+            }
+        }
+        
+        /* 開場場景文字樣式 */
+        #opening .title {
+            font-size: 2.5vw;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 0.3em;
+            transform: scale(0.8);
+            opacity: 0;
+            position: relative;
+            z-index: 10;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+        }
+        
+        #opening.active .title {
+            animation: zoomIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s forwards;
+        }
+        
+        #opening h1 {
+            font-size: 10vw;
+            font-weight: 900;
+            margin-bottom: 30px;
+            letter-spacing: 0.1em;
+            transform: translateY(80px) scale(0.9);
+            opacity: 0;
+            position: relative;
+            z-index: 10;
+            text-shadow: 0 4px 30px rgba(0,0,0,0.6);
+        }
+        
+        #opening.active h1 {
+            animation: bounceIn 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards;
+        }
+        
+        #opening p {
+            font-size: 3vw;
+            opacity: 0;
+            transform: translateY(30px);
+            position: relative;
+            z-index: 10;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+        }
+        
+        #opening.active p {
+            animation: slideUpFade 1s ease 1.5s forwards;
+        }
+        
+        /* 照片場景 */
+        .photo-scene {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            /* 馬賽克模糊感的灰色背景 - 簡化並提高亮度 */
+            background: 
+                /* 小方格馬賽克效果 */
+                repeating-linear-gradient(0deg, #909090 0px, #909090 8px, #9a9a9a 8px, #9a9a9a 16px),
+                repeating-linear-gradient(90deg, #959595 0px, #959595 8px, #8f8f8f 8px, #8f8f8f 16px),
+                /* 中型方格 */
+                repeating-linear-gradient(45deg, #a0a0a0 0px, #a0a0a0 10px, #8a8a8a 10px, #8a8a8a 20px),
+                /* 底層灰色 */
+                linear-gradient(135deg, #888888 0%, #707070 100%);
+            background-blend-mode: overlay, overlay, multiply, normal;
+        }
+        
+        /* 模糊背景圖層 - 改用淡灰色漸層，不使用照片 */
+        .photo-scene::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(150, 150, 150, 0.2) 0%, rgba(120, 120, 120, 0.3) 100%);
+            z-index: 0;
+            opacity: 1;
+        }
+        
+        /* 移除照片背景圖設定 - 不再需要 */
+        /*
+        .photo-scene[data-scene="1"]::after { background-image: url('jpg/1_1.jpg'); }
+        .photo-scene[data-scene="2"]::after { background-image: url('jpg/1_2.jpg'); }
+        .photo-scene[data-scene="3"]::after { background-image: url('jpg/2_1.jpg'); }
+        .photo-scene[data-scene="4"]::after { background-image: url('jpg/2_2.jpg'); }
+        .photo-scene[data-scene="5"]::after { background-image: url('jpg/2_4.jpg'); }
+        .photo-scene[data-scene="6"]::after { background-image: url('jpg/Image (9).jpg'); }
+        .photo-scene[data-scene="7"]::after { background-image: url('jpg/2024_10颱風_1.jpg'); }
+        .photo-scene[data-scene="8"]::after { background-image: url('jpg/Image (11).jpg'); }
+        .photo-scene[data-scene="9"]::after { background-image: url('jpg/Image (15).jpg'); }
+        */
+        
+        /* 單張照片（只適用於直接子圖片，不含 multi-photos 內的圖片） */
+        .photo-scene > img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            z-index: 2;
+            display: block;
+        }
+        
+        /* 多張照片容器 */
+        .photo-scene .multi-photos {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            display: block;
+        }
+        
+        /* 恢復容器內圖片的事件響應及基本樣式 */
+        .photo-scene .multi-photos img {
+            display: block;
+        }
+        
+        /* 左右並排兩張照片 */
+        .photo-scene .multi-photos.split-2 {
+            display: flex;
+            gap: 10px;
+            padding: 0 5px;
+        }
+        
+        .photo-scene .multi-photos.split-2 img {
+            position: relative;
+            width: 50%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            z-index: 3;
+            display: block;
+        }
+        
+        /* 淡入淡出切換 */
+        .photo-scene .multi-photos.fade img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            z-index: 3;
+            display: block;
+        }
+        
+        /* 第1張照片：預設顯示，然後淡出 */
+        .photo-scene .multi-photos.fade img:first-child {
+            opacity: 1;
+        }
+        
+        /* 第2張照片：預設隱藏 */
+        .photo-scene .multi-photos.fade img:nth-child(2) {
+            opacity: 0;
+        }
+        
+        /* 第1張照片：0-45% 顯示，45-50% 淡出 */
+        .photo-scene.active .multi-photos.fade img:first-child {
+            animation: photoFadeOut 6s ease-in-out forwards;
+        }
+        
+        /* 第2張照片：45-50% 淡入，50-100% 顯示 */
+        .photo-scene.active .multi-photos.fade img:nth-child(2) {
+            animation: photoFadeIn 6s ease-in-out forwards;
+        }
+        
+        @keyframes photoFadeOut {
+            0%, 45% { opacity: 1; }
+            55%, 100% { opacity: 0; }
+        }
+        
+        @keyframes photoFadeIn {
+            0%, 45% { opacity: 0; }
+            55%, 100% { opacity: 1; }
+        }
+        
+        /* 颱風5張照片輪播 */
+        .photo-scene .multi-photos.typhoon-carousel img,
+        .photo-scene .multi-photos.clean-carousel img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            z-index: 3;
+            opacity: 0;
+        }
+        
+        /* 5張照片依序顯示，每張顯示約1.5秒 */
+        .photo-scene.active .multi-photos.typhoon-carousel img:nth-child(1) {
+            animation: typhoonPhoto1 8s ease-in-out forwards;
+        }
+        .photo-scene.active .multi-photos.typhoon-carousel img:nth-child(2) {
+            animation: typhoonPhoto2 8s ease-in-out forwards;
+        }
+        .photo-scene.active .multi-photos.typhoon-carousel img:nth-child(3) {
+            animation: typhoonPhoto3 8s ease-in-out forwards;
+        }
+        .photo-scene.active .multi-photos.typhoon-carousel img:nth-child(4) {
+            animation: typhoonPhoto4 8s ease-in-out forwards;
+        }
+        .photo-scene.active .multi-photos.typhoon-carousel img:nth-child(5) {
+            animation: typhoonPhoto5 8s ease-in-out forwards;
+        }
+        
+        /* 第1張：0-20% */
+        @keyframes typhoonPhoto1 {
+            0% { opacity: 1; }
+            18% { opacity: 1; }
+            22%, 100% { opacity: 0; }
+        }
+        
+        /* 第2張：20-40% */
+        @keyframes typhoonPhoto2 {
+            0%, 18% { opacity: 0; }
+            22% { opacity: 1; }
+            38% { opacity: 1; }
+            42%, 100% { opacity: 0; }
+        }
+        
+        /* 第3張：40-60% */
+        @keyframes typhoonPhoto3 {
+            0%, 38% { opacity: 0; }
+            42% { opacity: 1; }
+            58% { opacity: 1; }
+            62%, 100% { opacity: 0; }
+        }
+        
+        /* 第4張：60-80% */
+        @keyframes typhoonPhoto4 {
+            0%, 58% { opacity: 0; }
+            62% { opacity: 1; }
+            78% { opacity: 1; }
+            82%, 100% { opacity: 0; }
+        }
+        
+        /* 第5張：80-100% */
+        @keyframes typhoonPhoto5 {
+            0%, 78% { opacity: 0; }
+            82%, 100% { opacity: 1; }
+        }
+        
+        /* 環境打掃3張照片輪播 */
+        .photo-scene.active .multi-photos.clean-carousel img:nth-child(1) {
+            animation: cleanPhoto1 6s ease-in-out forwards;
+        }
+        .photo-scene.active .multi-photos.clean-carousel img:nth-child(2) {
+            animation: cleanPhoto2 6s ease-in-out forwards;
+        }
+        .photo-scene.active .multi-photos.clean-carousel img:nth-child(3) {
+            animation: cleanPhoto3 6s ease-in-out forwards;
+        }
+        
+        /* 第1張：0-33% */
+        @keyframes cleanPhoto1 {
+            0% { opacity: 1; }
+            30% { opacity: 1; }
+            35%, 100% { opacity: 0; }
+        }
+        
+        /* 第2張：33-66% */
+        @keyframes cleanPhoto2 {
+            0%, 30% { opacity: 0; }
+            35% { opacity: 1; }
+            63% { opacity: 1; }
+            68%, 100% { opacity: 0; }
+        }
+        
+        /* 第3張：66-100% */
+        @keyframes cleanPhoto3 {
+            0%, 63% { opacity: 0; }
+            68%, 100% { opacity: 1; }
+        }
+        
+        .photo-scene::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(80,80,80,0.3) 0%, rgba(120,120,120,0.1) 100%);
+            z-index: 1; /* 在背景(0)之上，在圖片(3)之下 */
+            pointer-events: none;
+        }
+        
+        .photo-scene .content {
+            position: absolute;
+            bottom: 10%;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 0 80px;
+            z-index: 10; /* 提升到最高層確保文字始終在最上方 */
+        }
+        
+        .photo-scene.active h2 {
+            font-size: 5vw;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            animation: slideUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        
+        .photo-scene h2 {
+            font-size: 5vw;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transform: translateY(50px);
+            opacity: 0;
+        }
+        
+        .photo-scene.active p {
+            font-size: 2.5vw;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            animation: fadeIn 0.8s ease 0.3s forwards;
+        }
+        
+        .photo-scene p {
+            font-size: 2.5vw;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            opacity: 0;
+        }
+        
+        /* 結尾場景特殊效果 */
+        .final-scene .content {
+            bottom: 15%;
+        }
+        
+        /* 結尾標題 - 溫暖感人的效果 */
+        .final-message {
+            position: relative;
+            display: inline-block;
+            font-size: 6vw !important;
+            font-weight: 800 !important;
+            line-height: 1.4 !important;
+            color: #fbbf24 !important;
+            text-shadow: 0 0 30px rgba(251, 191, 36, 0.8),
+                         0 0 60px rgba(251, 191, 36, 0.5),
+                         0 4px 20px rgba(0,0,0,0.8),
+                         0 2px 4px rgba(0,0,0,0.9) !important;
+        }
+        
+        /* 溫暖光暈效果 */
+        .final-scene.active .final-message::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120%;
+            height: 150%;
+            background: radial-gradient(ellipse at center, rgba(251, 191, 36, 0.3) 0%, transparent 70%);
+            animation: warmGlow 3s ease-in-out infinite;
+            z-index: -1;
+        }
+        
+        @keyframes warmGlow {
+            0%, 100% {
+                opacity: 0.6;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 0.9;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+        }
+        
+        /* 文字逐段浮現 */
+        .final-message .word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(30px) scale(0.8);
+        }
+        
+        .final-message .comma {
+            display: inline;
+            opacity: 0;
+        }
+        
+        .final-scene.active .final-message .word:nth-child(1) {
+            animation: wordReveal 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s forwards,
+                       heartbeat 2s ease-in-out 1.5s 2,
+                       messageFadeOut 1s ease 3.5s forwards;
+        }
+        
+        .final-scene.active .final-message .comma {
+            animation: fadeIn 0.5s ease 1.2s forwards,
+                       messageFadeOut 1s ease 3.5s forwards;
+        }
+        
+        .final-scene.active .final-message .word:nth-child(3) {
+            animation: wordReveal 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 1.5s forwards,
+                       heartbeat 2s ease-in-out 2.7s 2,
+                       messageFadeOut 1s ease 3.5s forwards;
+        }
+        
+        @keyframes wordReveal {
+            0% {
+                opacity: 0;
+                transform: translateY(30px) scale(0.8);
+            }
+            60% {
+                opacity: 1;
+                transform: translateY(-5px) scale(1.05);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        /* 溫暖的心跳效果 */
+        @keyframes heartbeat {
+            0%, 100% {
+                transform: scale(1);
+            }
+            10% {
+                transform: scale(1.05);
+            }
+            20% {
+                transform: scale(1);
+            }
+            30% {
+                transform: scale(1.03);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+        
+        /* 文字淡出消失 */
+        @keyframes messageFadeOut {
+            0% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+        }
+        
+        /* 結尾資訊文字 */
+        .final-info {
+            font-size: 6vw !important;
+            margin-top: 30px !important;
+            color: #fbbf24 !important;
+            font-weight: 600 !important;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5), 0 4px 20px rgba(0,0,0,0.6) !important;
+        }
+        
+        .final-scene.active .final-info {
+            animation: fadeInUpDelayed 1.2s ease 4.5s forwards;
+        }
+        
+        @keyframes fadeInUpDelayed {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        /* 結尾 */
+        #closing {
+            background: linear-gradient(135deg, #d97706 0%, #ea580c 100%) !important;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* 強制確保結尾場景的背景色顯示 */
+        #closing.active {
+            background: linear-gradient(135deg, #d97706 0%, #ea580c 100%) !important;
+        }
+        
+        /* 確保結尾場景的文字一定可見 - 移除初始opacity:0，讓文字立即顯示 */
+        #closing h1,
+        #closing h2,
+        #closing .cta-button,
+        #closing .date {
+            position: relative;
+            z-index: 10;
+            color: #fff !important;
+            opacity: 1 !important; /* 強制顯示 */
+        }
+        
+        #closing h1 {
+            font-size: 7vw;
+            font-weight: 900;
+            margin-bottom: 40px;
+        }
+        
+        #closing.active h1 {
+            animation: slideUpQuick 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        
+        #closing h2 {
+            font-size: 5vw;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 80px;
+        }
+        
+        #closing.active h2 {
+            animation: fadeInQuick 0.6s ease forwards;
+        }
+        
+        #closing .cta-button {
+            padding: 30px 80px;
+            background: #fff;
+            color: #d97706;
+            font-size: 3vw;
+            font-weight: 800;
+            border-radius: 50px;
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.4);
+        }
+        
+        #closing.active .cta-button {
+            animation: popInQuick 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        
+        #closing .date {
+            position: absolute;
+            bottom: 60px;
+            font-size: 2vw;
+        }
+        
+        #closing.active .date {
+            animation: fadeInQuick 0.6s ease forwards;
+        }
+        
+        /* 動畫 */
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideUpFade {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes zoomIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes bounceIn {
+            0% {
+                transform: translateY(80px) scale(0.9);
+                opacity: 0;
+            }
+            60% {
+                transform: translateY(-10px) scale(1.05);
+                opacity: 1;
+            }
+            80% {
+                transform: translateY(5px) scale(0.98);
+            }
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* 結尾場景專用的快速動畫 */
+        @keyframes slideUpQuick {
+            from {
+                transform: translateY(30px);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInQuick {
+            from {
+                opacity: 0.8;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes popInQuick {
+            from {
+                transform: scale(0.8);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+        
+        /* Ken Burns 效果已停用 - 造成背景顯示問題 */
+        /*
+        .photo-scene.active {
+            animation: kenBurns 4s ease-in-out forwards;
+        }
+        
+        @keyframes kenBurns {
+            from {
+                transform: scale(1);
+            }
+            to {
+                transform: scale(1.1);
+            }
+        }
+        */
+        
+        /* 控制面板 - 隱藏 */
+        #controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 20px 40px;
+            border-radius: 50px;
+            display: none; /* 隱藏控制按鈕 */
+            gap: 20px;
+            z-index: 100;
+        }
+        
+        #controls button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        #controls button:hover {
+            background: #2563eb;
+            transform: scale(1.05);
+        }
+        
+        #controls button.active {
+            background: #10b981;
+        }
+        
+        #progress {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.9);
+            background: rgba(0,0,0,0.6);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            z-index: 101;
+            display: none; /* 隱藏進度 */
+        }
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <!-- 開場 -->
+        <div id="opening" class="scene active">
+            <div class="title">北端里里長候選人</div>
+            <h1>呂佳穎</h1>
+            <p>三代人守護的家</p>
+        </div>
+        
+        <!-- 場景1: 第一代 - 陳朝見 -->
+        <div class="scene photo-scene" data-scene="1">
+            <img src="jpg/1_1.jpg" alt="第一代里長陳朝見">
+            <div class="content">
+                <h2>慈愛里，三代人的承諾</h2>
+                <p>阿公陳朝見，慈愛里第一代里長</p>
+            </div>
+        </div>
+        
+        <!-- 場景2: 第一代的堅持 -->
+        <div class="scene photo-scene" data-scene="2">
+            <img src="jpg/1_2.jpg" alt="社區清潔服務">
+            <div class="content">
+                <h2>用50年的歲月</h2>
+                <p>守護每一條巷弄，照顧每一個鄰居</p>
+            </div>
+        </div>
+        
+        <!-- 場景3: 第二代接棒 (2張照片淡入淡出) -->
+        <div class="scene photo-scene" data-scene="3">
+            <div class="multi-photos fade">
+                <img src="jpg/2_1_1.jpg" alt="第二代里長呂南風">
+                <img src="jpg/2_1.jpg" alt="父女傳承">
+            </div>
+            <div class="content">
+                <h2>爸爸呂南風接下這份責任</h2>
+                <p>他教我什麼是真心為里民服務</p>
+            </div>
+        </div>
+        
+        <!-- 場景4: 傳承的溫度 (2張照片淡入淡出) -->
+        <div class="scene photo-scene" data-scene="4">
+            <div class="multi-photos fade">
+                <img src="jpg/2_2.jpg" alt="服務里民">
+                <img src="jpg/2_2_2.jpg" alt="三代同台">
+            </div>
+            <div class="content">
+                <h2>他們用行動告訴我</h2>
+                <p>服務不是口號，是一輩子的陪伴</p>
+            </div>
+        </div>
+        
+        <!-- 場景5: 傳承交棒 (2張照片左右並排) -->
+        <div class="scene photo-scene" data-scene="5">
+            <div class="multi-photos split-2">
+                <img src="jpg/2_4.jpg" alt="父親的身影">
+                <img src="jpg/2_5.jpg" alt="女兒接棒">
+            </div>
+            <div class="content">
+                <h2>從他手中，我接下這份使命</h2>
+                <p>不只是延續，更是承諾</p>
+            </div>
+        </div>
+        
+        <!-- 場景6: 第三代延續 (2張照片左右並排) -->
+        <div class="scene photo-scene" data-scene="6">
+            <div class="multi-photos split-2">
+                <img src="jpg/Image (9).jpg" alt="清理環境">
+                <img src="jpg/Image (10).jpg" alt="災後重建">
+            </div>
+            <div class="content">
+                <h2>現在，換我來延續這份承諾</h2>
+                <p>颱風、髒亂、困難，我都會第一時間出現</p>
+            </div>
+        </div>
+        
+        <!-- 場景7: 2024年10月颱風實戰 (5張照片輪播) -->
+        <div class="scene photo-scene" data-scene="7">
+            <div class="multi-photos typhoon-carousel">
+                <img src="jpg/2024_10颱風_1.jpg" alt="颱風天巡視">
+                <img src="jpg/2024_10颱風_2.jpg" alt="協助里民">
+                <img src="jpg/2024_10颱風_3.jpg" alt="清理災情">
+                <img src="jpg/2024_10颱風_4.jpg" alt="堅守崗位">
+                <img src="jpg/2024_10颱風_5.jpg" alt="無畏風雨">
+            </div>
+            <div class="content">
+                <h2>颱風天，里民的安全是我的責任</h2>
+                <p>無畏風雨，堅守家園</p>
+            </div>
+        </div>
+        
+        <!-- 場景8: 用心服務 -->
+        <div class="scene photo-scene" data-scene="8">
+            <img src="jpg/Image (14).jpg" alt="傾聽民意">
+            <div class="content">
+                <h2>每個鄰居的需要</h2>
+                <p>都是我最在乎的事</p>
+            </div>
+        </div>
+        
+        <!-- 場景9: 環境打掃 (3張照片輪播) -->
+        <div class="scene photo-scene" data-scene="9">
+            <div class="multi-photos clean-carousel">
+                <img src="jpg/Image (11).jpg" alt="清潔環境">
+                <img src="jpg/Image (12).jpg" alt="街道整理">
+                <img src="jpg/Image (13).jpg" alt="社區美化">
+            </div>
+            <div class="content">
+                <h2>清潔環境，從我做起</h2>
+                <p>每一條街道，每一個角落，都是我們共同的家園</p>
+            </div>
+        </div>
+        
+        <!-- 場景10: 結尾 - 傳承與承諾 -->
+        <div class="scene photo-scene final-scene" data-scene="10">
+            <img src="jpg/Image (15).jpg" alt="持續服務">
+            <div class="content">
+                <h2 class="final-message">
+                    <span class="word">北端里的未來</span><span class="comma">，</span><span class="word">讓我繼續守護</span>
+                </h2>
+                <p class="final-info">推薦 呂佳穎 -2026年11月28 里長選舉</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 背景音樂 -->
+    <audio id="bgMusic" loop>
+        <source src="background-music.mp3" type="audio/mpeg">
+        您的瀏覽器不支援音訊播放。
+    </audio>
+    
+    <!-- 語音旁白 -->
+    <audio id="voiceover" preload="auto"></audio>
+    
+    <div id="controls">
+        <button id="playBtn" class="active">播放</button>
+        <button id="pauseBtn">暫停</button>
+        <button id="restartBtn">重新開始</button>
+    </div>
+    
+    <div id="progress">場景 1 / 8</div>
+    
+    <script>
+        const scenes = document.querySelectorAll('.scene');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const progress = document.getElementById('progress');
+        const bgMusic = document.getElementById('bgMusic');
+        const voiceover = document.getElementById('voiceover');
+        
+        let currentScene = 0;
+        let isPlaying = true;
+        let timer = null;
+        
+        // 背景音樂設定
+        bgMusic.volume = 0.3; // 音量 30%（當有語音時會更低）
+        voiceover.volume = 0.9; // 語音音量 90%
+        
+        // 場景語音檔案對應表（新版溫暖日常風格）
+        const sceneVoiceovers = [
+            'audio/voice_scene1.mp3',  // 開場：我是呂佳穎，這是我的家
+            'audio/voice_scene2.mp3',  // 場景1：阿公陳朝見，第一代里長
+            'audio/voice_scene3.mp3',  // 場景2：五十年的歲月
+            'audio/voice_scene4.mp3',  // 場景3：爸爸呂南風接手
+            'audio/voice_scene5.mp3',  // 場景4：服務是一輩子的承諾
+            'audio/voice_scene6.mp3',  // 場景5：換我來延續這份責任
+            'audio/voice_scene7.mp3',  // 場景6：你們都是我的家人
+            'audio/voice_scene8.mp3',  // 場景7：颱風天整夜沒睡
+            'audio/voice_scene9.mp3',  // 場景8：你們的聲音我都聽到了
+            'audio/voice_scene10.mp3', // 場景9：乾淨的環境靠我們一起維持
+            'audio/voice_scene11.mp3', // 場景10：北端里的未來，請您支持
+        ];
+        
+        // 播放場景語音
+        function playVoiceover(index) {
+            const voiceFile = sceneVoiceovers[index];
+            
+            // 停止當前播放的語音
+            voiceover.pause();
+            voiceover.currentTime = 0;
+            
+            if (voiceFile && voiceFile !== '') {
+                voiceover.src = voiceFile;
+                
+                // 語音播放時降低背景音樂音量（Audio Ducking）
+                voiceover.addEventListener('play', () => {
+                    bgMusic.volume = 0.15; // 降低背景音樂
+                }, { once: true });
+                
+                voiceover.addEventListener('ended', () => {
+                    bgMusic.volume = 0.3; // 恢復背景音樂
+                }, { once: true });
+                
+                // 嘗試播放語音
+                voiceover.play().catch(e => {
+                    console.log('語音檔案載入失敗或不存在:', voiceFile);
+                    bgMusic.volume = 0.3; // 恢復背景音樂
+                });
+            }
+        }
+        
+        // 自動播放音樂（需要用戶互動才能播放）
+        function startMusic() {
+            bgMusic.play().catch(e => {
+                console.log('音樂需要用戶互動才能播放');
+                // 添加點擊事件來啟動音樂
+                document.addEventListener('click', () => {
+                    bgMusic.play();
+                }, { once: true });
+            });
+        }
+        
+        const sceneDurations = [4000, 5000, 5000, 6000, 6000, 6000, 8000, 6000, 6000, 6000, 8000]; // 毫秒 (11個場景)
+        
+        function showScene(index) {
+            console.log('showScene:', index);
+            
+            // 移除所有場景的 active class
+            scenes.forEach(scene => {
+                scene.classList.remove('active');
+            });
+            
+            // 添加新場景的 active class
+            const currentSceneElement = scenes[index];
+            currentSceneElement.classList.add('active');
+            
+            // 播放該場景的語音旁白
+            playVoiceover(index);
+            
+            // DEBUG: 強制檢查顯示狀態
+            console.log(`Scene ${index} has active class:`, currentSceneElement.classList.contains('active'));
+            console.log(`Scene ${index} display:`, window.getComputedStyle(currentSceneElement).display);
+            
+            // 特别调试结尾场景
+            if (currentSceneElement.id === 'closing') {
+                console.log('=== 结尾场景调试 ===');
+                console.log('Background:', window.getComputedStyle(currentSceneElement).background);
+                console.log('Background-color:', window.getComputedStyle(currentSceneElement).backgroundColor);
+                console.log('Display:', window.getComputedStyle(currentSceneElement).display);
+                console.log('Z-index:', window.getComputedStyle(currentSceneElement).zIndex);
+            }
+            
+            progress.textContent = `場景 ${index + 1} / ${scenes.length}`;
+        }
+        
+        function nextScene() {
+            console.log('nextScene called, currentScene before:', currentScene);
+            if (!isPlaying) return;
+            
+            currentScene++;
+            if (currentScene >= scenes.length) {
+                // 結尾場景後停止，不循環
+                pause();
+                console.log('影片播放完畢，停留在結尾場景');
+                return;
+            }
+            
+            console.log('nextScene: moving to scene', currentScene);
+            showScene(currentScene);
+            scheduleNext();
+        }
+        
+        function scheduleNext() {
+            if (timer) clearTimeout(timer);
+            if (isPlaying) {
+                const duration = sceneDurations[currentScene];
+                console.log('scheduleNext: scene', currentScene, 'duration', duration);
+                timer = setTimeout(nextScene, duration);
+            }
+        }
+        
+        function play() {
+            isPlaying = true;
+            playBtn.classList.add('active');
+            pauseBtn.classList.remove('active');
+            bgMusic.play(); // 播放音樂
+            scheduleNext();
+        }
+        
+        function pause() {
+            isPlaying = false;
+            playBtn.classList.remove('active');
+            pauseBtn.classList.add('active');
+            bgMusic.pause(); // 暫停音樂
+            if (timer) clearTimeout(timer);
+        }
+        
+        function restart() {
+            currentScene = 0;
+            bgMusic.currentTime = 0; // 音樂從頭開始
+            bgMusic.play();
+            showScene(0);
+            play();
+        }
+        
+        playBtn.addEventListener('click', play);
+        pauseBtn.addEventListener('click', pause);
+        restartBtn.addEventListener('click', restart);
+        
+        // 圖片載入檢查
+        const images = document.querySelectorAll('.photo-scene img');
+        images.forEach((img, index) => {
+            img.addEventListener('load', () => {
+                console.log(`Image ${index + 1} loaded successfully:`, img.src);
+            });
+            img.addEventListener('error', (e) => {
+                console.error(`Image ${index + 1} failed to load:`, img.src);
+                // 使用備用圖片
+                img.src = `https://via.placeholder.com/1920x1080/333/fff?text=Scene+${index + 1}`;
+            });
+        });
+        
+        // 自動開始播放（延後到動畫開始後）
+        setTimeout(() => {
+            scheduleNext();
+        }, 4100); // 4秒動畫 + 100ms
+        
+        startMusic(); // 啟動背景音樂
+        
+        // 鍵盤控制
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (isPlaying) pause();
+                else play();
+            } else if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                pause();
+                nextScene();
+            } else if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                pause();
+                currentScene = Math.max(0, currentScene - 1);
+                showScene(currentScene);
+            } else if (e.code === 'KeyR') {
+                e.preventDefault();
+                restart();
+            }
+        });
+    </script>
+</body>
+</html>

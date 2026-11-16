@@ -1,0 +1,41 @@
+ scene 0 duration 4000
+preview.html:406 nextScene called, currentScene before: 0
+preview.html:414 nextScene: moving to scene 1
+preview.html:387 showScene: 1
+preview.html:397 Scene 1 background: rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box
+preview.html:423 scheduleNext: scene 1 duration 4000
+preview.html:406 nextScene called, currentScene before: 1
+preview.html:414 nextScene: moving to scene 2
+preview.html:387 showScene: 2
+preview.html:397 Scene 2 background: rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box
+preview.html:423 scheduleNext: scene 2 duration 4000
+preview.html:406 nextScene called, currentScene before: 2
+preview.html:414 nextScene: moving to scene 3
+preview.html:387 showScene: 3
+preview.html:397 Scene 3 background: rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box
+preview.html:423 scheduleNext: scene 3 duration 4000
+preview.html:406 nextScene called, currentScene before: 3
+preview.html:414 nextScene: moving to scene 4
+preview.html:387 showScene: 4
+preview.html:397 Scene 4 background: rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box
+preview.html:423 scheduleNext: scene 4 duration 4000
+preview.html:406 nextScene called, currentScene before: 4
+preview.html:414 nextScene: moving to scene 5
+preview.html:387 showScene: 5
+preview.html:397 Scene 5 background: rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box
+preview.html:423 scheduleNext: scene 5 duration 4000
+preview.html:406 nextScene called, currentScene before: 5
+preview.html:414 nextScene: moving to scene 6
+preview.html:387 showScene: 6
+preview.html:397 Scene 6 background: rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box
+preview.html:423 scheduleNext: scene 6 duration 4000
+preview.html:406 nextScene called, currentScene before: 6
+preview.html:414 nextScene: moving to scene 7
+preview.html:387 showScene: 7
+preview.html:397 Scene 7 background: rgba(0, 0, 0, 0) linear-gradient(135deg, rgb(217, 119, 6) 0%, rgb(234, 88, 12) 100%) repeat scroll 0
+preview.html:423 scheduleNext: scene 7 duration 5000
+preview.html:406 nextScene called, currentScene before: 7
+preview.html:414 nextScene: moving to scene 0
+preview.html:387 showScene: 0
+preview.html:397 Scene 0 background: rgba(0, 0, 0, 0) linear-gradient(135deg, rgb(255, 107, 53) 0%, rgb(247, 147, 30) 100%) repeat scroll
+preview.html:423 scheduleNext: scene 0 duration 4000

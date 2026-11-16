@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>語音生成工具 - 一鍵生成所有旁白</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        
+        .info-box h3 {
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ol {
+            margin-left: 20px;
+            color: #333;
+        }
+        
+        .info-box li {
+            margin: 8px 0;
+        }
+        
+        .scene-list {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .scene-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        
+        .scene-item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        
+        .scene-item.highlight {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+        
+        .scene-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .scene-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .scene-filename {
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            color: #666;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .scene-text {
+            color: #495057;
+            line-height: 1.6;
+            font-size: 15px;
+            margin-bottom: 12px;
+        }
+        
+        .scene-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-copy {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-copy:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        
+        .btn-open {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-open:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        
+        .btn-all {
+            background: #8b5cf6;
+            color: white;
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-all:hover {
+            background: #7c3aed;
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .tools-section {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        
+        .tools-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .tool-link {
+            display: block;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #3b82f6;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+        
+        .tool-link:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .badge-recommend {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-free {
+            background: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ 語音生成工具</h1>
+        <p class="subtitle">一鍵生成所有場景旁白</p>
+        
+        <div class="info-box">
+            <h3>📋 使用說明</h3>
+            <ol>
+                <li>點擊每個場景的「複製文字」按鈕</li>
+                <li>點擊「開啟AI語音工具」</li>
+                <li>在網站上貼上文字，選擇「曉臻」語音</li>
+                <li>生成並下載MP3</li>
+                <li>重新命名為對應的檔案名稱</li>
+                <li>放入專案的 <code>audio/</code> 資料夾</li>
+            </ol>
+        </div>
+        
+        <button class="btn-all" onclick="openAllTexts()">📋 一次複製所有文字</button>
+        
+        <div class="scene-list" id="sceneList"></div>
+        
+        <div id="status"></div>
+        
+        <div class="tools-section">
+            <h3>🔧 推薦AI語音工具</h3>
+            <a href="https://ttsmaker.com/zh-tw" target="_blank" class="tool-link">
+                🌟 TTSMaker <span class="badge badge-recommend">推薦</span><span class="badge badge-free">免費</span>
+                <br><small>最簡單，無限制使用，選擇「曉臻」或「雲哲」語音</small>
+            </a>
+            <a href="https://www.ttsfree.com/zh-tw" target="_blank" class="tool-link">
+                🎵 TTSFree <span class="badge badge-free">免費</span>
+                <br><small>備用選項，Microsoft語音引擎</small>
+            </a>
+            <a href="https://azure.microsoft.com/zh-tw/products/ai-services/text-to-speech" target="_blank" class="tool-link">
+                ☁️ Azure TTS
+                <br><small>高品質，每月免費50萬字元</small>
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        const scenes = [
+            {
+                title: "場景1 - 開場",
+                filename: "voice_scene1.mp3",
+                text: "北端里里長候選人，呂佳穎，三代人守護的家",
+                highlight: false
+            },
+            {
+                title: "場景2 - 第一代",
+                filename: "voice_scene2.mp3",
+                text: "慈愛里，三代人的承諾。阿公陳朝見，慈愛里第一代里長",
+                highlight: false
+            },
+            {
+                title: "場景3 - 第一代的堅持",
+                filename: "voice_scene3.mp3",
+                text: "用50年的歲月，守護每一條巷弄，照顧每一個鄰居",
+                highlight: false
+            },
+            {
+                title: "場景4 - 第二代接棒",
+                filename: "voice_scene4.mp3",
+                text: "爸爸呂南風接下這份責任，他教我什麼是真心為里民服務",
+                highlight: false
+            },
+            {
+                title: "場景5 - 傳承的溫度",
+                filename: "voice_scene5.mp3",
+                text: "他們用行動告訴我，服務不是口號，是一輩子的陪伴",
+                highlight: false
+            },
+            {
+                title: "場景6 - 傳承交棒",
+                filename: "voice_scene6.mp3",
+                text: "從他手中，我接下這份使命，不只是延續，更是承諾",
+                highlight: false
+            },
+            {
+                title: "場景7 - 第三代延續",
+                filename: "voice_scene7.mp3",
+                text: "現在，換我來延續這份承諾。颱風、髒亂、困難，我都會第一時間出現",
+                highlight: false
+            },
+            {
+                title: "場景8 - 颱風實戰 ⭐",
+                filename: "voice_scene8.mp3",
+                text: "颱風天，里民的安全是我的責任。無畏風雨，堅守家園",
+                highlight: true
+            },
+            {
+                title: "場景9 - 用心服務",
+                filename: "voice_scene9.mp3",
+                text: "每個鄰居的需要，都是我最在乎的事",
+                highlight: false
+            },
+            {
+                title: "場景10 - 結尾",
+                filename: "voice_scene10.mp3",
+                text: "北端里的未來，讓我繼續守護。推薦呂佳穎，2026年11月，里長選舉",
+                highlight: false
+            }
+        ];
+        
+        function renderScenes() {
+            const container = document.getElementById('sceneList');
+            container.innerHTML = scenes.map((scene, index) => `
+                <div class="scene-item ${scene.highlight ? 'highlight' : ''}">
+                    <div class="scene-header">
+                        <span class="scene-title">${scene.title}</span>
+                        <span class="scene-filename">${scene.filename}</span>
+                    </div>
+                    <div class="scene-text">${scene.text}</div>
+                    <div class="scene-actions">
+                        <button class="btn-copy" onclick="copyText(${index})">📋 複製文字</button>
+                        <button class="btn-open" onclick="openTool('${scene.text}')">🌐 開啟AI語音工具</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function copyText(index) {
+            const text = scenes[index].text;
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus(`✓ 已複製：${scenes[index].title}`, 'success');
+            }).catch(err => {
+                showStatus('複製失敗，請手動複製文字', 'error');
+            });
+        }
+        
+        function openTool(text) {
+            const encodedText = encodeURIComponent(text);
+            window.open(`https://ttsmaker.com/zh-tw`, '_blank');
+            copyText(scenes.findIndex(s => s.text === text));
+        }
+        
+        function openAllTexts() {
+            const allText = scenes.map((s, i) => 
+                `${s.title}\n檔案名稱：${s.filename}\n旁白：${s.text}\n`
+            ).join('\n---\n\n');
+            
+            navigator.clipboard.writeText(allText).then(() => {
+                showStatus('✓ 已複製所有旁白文字！請開啟AI語音工具逐一生成', 'success');
+            });
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            setTimeout(() => {
+                status.style.opacity = '0';
+                setTimeout(() => {
+                    status.textContent = '';
+                    status.style.opacity = '1';
+                }, 300);
+            }, 3000);
+        }
+        
+        // 初始化
+        renderScenes();
+        showStatus('👋 歡迎使用！點擊按鈕開始生成語音', 'info');
+    </script>
+</body>
+</html>
